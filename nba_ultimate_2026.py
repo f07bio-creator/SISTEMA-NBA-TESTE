@@ -1,4 +1,55 @@
+# ============================================================================
+# INSTALAÇÃO AUTOMÁTICA DE DEPENDÊNCIAS
+# ============================================================================
+import subprocess
+import sys
+import os
+
+def install_package(package):
+    """Instala um pacote se não estiver disponível"""
+    try:
+        __import__(package)
+        return True
+    except ImportError:
+        try:
+            # Tenta instalar via pip
+            subprocess.check_call([sys.executable, "-m", "pip", "install", package, "--quiet"])
+            return True
+        except:
+            return False
+
+# Lista de pacotes necessários
+REQUIRED_PACKAGES = [
+    "plotly>=5.18.0",
+    "pandas>=2.1.4",
+    "numpy>=1.24.4",
+    "scikit-learn>=1.3.2",
+    "matplotlib>=3.7.2",
+    "seaborn>=0.12.2",
+    "requests>=2.31.0"
+]
+
+# Verificar e instalar
+installed = []
+failed = []
+
+for package in REQUIRED_PACKAGES:
+    pkg_name = package.split('>=')[0].split('==')[0]
+    if install_package(pkg_name):
+        installed.append(pkg_name)
+    else:
+        failed.append(pkg_name)
+
+if failed:
+    print(f"⚠️ Falha ao instalar: {failed}")
+
+# Agora importe normalmente
 import streamlit as st
+import plotly.graph_objects as go
+import plotly.express as px
+import pandas as pd
+import numpy as np
+# ... resto dos importsimport streamlit as st
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
@@ -1913,3 +1964,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
