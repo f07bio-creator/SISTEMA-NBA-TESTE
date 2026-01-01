@@ -1,35 +1,4 @@
 # ============================================================================
-# VERIFICAÇÃO DE DEPENDÊNCIAS (APENAS PARA DEBUG)
-# ============================================================================
-import sys
-import subprocess
-import pkg_resources
-
-def check_and_install():
-    required = {
-        'streamlit': '1.32.0',
-        'pandas': '2.1.4',
-        'numpy': '1.24.4',
-        'plotly': '5.18.0',
-        'scikit-learn': '1.3.2',
-        'matplotlib': '3.7.2',
-        'seaborn': '0.12.2',
-        'requests': '2.31.0'
-    }
-    
-    installed = {pkg.key: pkg.version for pkg in pkg_resources.working_set}
-    
-    for package, version in required.items():
-        if package not in installed:
-            print(f"Instalando {package}...")
-            subprocess.check_call([sys.executable, "-m", "pip", "install", f"{package}=={version}"])
-        else:
-            print(f"✅ {package} {installed[package]} já instalado")
-
-# Executar verificação
-check_and_install()
-
-# ============================================================================
 # AGORA IMPORTE NORMALMENTE
 # ============================================================================
 import streamlit as st
@@ -45,27 +14,6 @@ from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 import seaborn as sns
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
-
-warnings.filterwarnings('ignore')
-
-import streamlit as st
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
-import plotly.graph_objects as go
-import plotly.express as px
-from plotly.subplots import make_subplots
-import sqlite3
-import json
-import requests
-import pickle
-import warnings
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.preprocessing import StandardScaler
-import matplotlib.pyplot as plt
-import seaborn as sns
-import time
 from typing import Dict, List, Optional, Tuple
 
 warnings.filterwarnings('ignore')
@@ -195,11 +143,11 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================================================================
-# 1. SISTEMA DE DADOS NBA 2025-26
+# 1. SISTEMA DE DADOS NBA 2025-26 (VERSÃO STREAMLIT CLOUD)
 # ============================================================================
 
 class NBA2026DataEngine:
-    """Motor de dados para temporada 2025-26"""
+    """Motor de dados para temporada 2025-26 - Versão Streamlit Cloud"""
     
     def __init__(self):
         self.season = "2025-26"
@@ -212,52 +160,9 @@ class NBA2026DataEngine:
             'Origin': 'https://www.nba.com',
             'Connection': 'keep-alive',
         }
-        self.initialize_database()
+        # Em vez de SQLite, usamos cache em memória
         self.cached_data = {}
         
-    def initialize_database(self):
-        """Inicializa banco de dados SQLite"""
-        self.conn = sqlite3.connect('nba_2026_analytics.db', check_same_thread=False)
-        self.cursor = self.conn.cursor()
-        
-        # Tabela de estatísticas dos times
-        self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS team_stats_2026 (
-                team_id INTEGER PRIMARY KEY,
-                team_name TEXT,
-                data_json TEXT,
-                last_updated TIMESTAMP,
-                season TEXT
-            )
-        ''')
-        
-        # Tabela de jogos
-        self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS game_logs_2026 (
-                game_id TEXT PRIMARY KEY,
-                home_team TEXT,
-                away_team TEXT,
-                home_score INTEGER,
-                away_score INTEGER,
-                date DATE,
-                data_json TEXT
-            )
-        ''')
-        
-        # Tabela de análises salvas
-        self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS saved_analyses (
-                analysis_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                timestamp TIMESTAMP,
-                matchup TEXT,
-                prediction_data TEXT,
-                accuracy_score REAL,
-                features_used TEXT
-            )
-        ''')
-        
-        self.conn.commit()
-    
     def get_all_teams(self) -> List[str]:
         """Retorna todos os times da NBA 2025-26"""
         teams_2025_26 = [
@@ -276,44 +181,22 @@ class NBA2026DataEngine:
         """Obtém estatísticas do time para 2025-26"""
         
         # Verificar cache primeiro
-        if use_cache:
-            cache_key = f"{team_name}_{self.season}"
-            if cache_key in self.cached_data:
-                cached_time = self.cached_data[cache_key]['timestamp']
-                if datetime.now() - cached_time < timedelta(hours=6):
-                    return self.cached_data[cache_key]['data']
-            
-            # Verificar banco de dados
-            self.cursor.execute(
-                "SELECT data_json, last_updated FROM team_stats_2026 WHERE team_name = ? AND season = ?",
-                (team_name, self.season)
-            )
-            result = self.cursor.fetchone()
-            
-            if result:
-                data_json, last_updated = result
-                if datetime.strptime(last_updated, '%Y-%m-%d %H:%M:%S') > datetime.now() - timedelta(hours=24):
-                    return json.loads(data_json)
+        cache_key = f"{team_name}_{self.season}"
+        
+        if use_cache and cache_key in self.cached_data:
+            cached_time = self.cached_data[cache_key]['timestamp']
+            if datetime.now() - cached_time < timedelta(hours=6):
+                return self.cached_data[cache_key]['data']
         
         try:
             # Simular dados da API 2025-26 (atualizar quando a temporada começar)
             stats = self._simulate_2026_stats(team_name)
             
             # Salvar no cache
-            cache_key = f"{team_name}_{self.season}"
             self.cached_data[cache_key] = {
                 'data': stats,
                 'timestamp': datetime.now()
             }
-            
-            # Salvar no banco de dados
-            self.cursor.execute('''
-                INSERT OR REPLACE INTO team_stats_2026 
-                (team_name, data_json, last_updated, season)
-                VALUES (?, ?, ?, ?)
-            ''', (team_name, json.dumps(stats), datetime.now().strftime('%Y-%m-%d %H:%M:%S'), self.season))
-            
-            self.conn.commit()
             
             return stats
             
@@ -828,7 +711,7 @@ class NBAUltimateAnalytics2026:
                 'confidence_score': final_prediction['confidence'] * 100
             }
             
-            # Salvar análise
+            # Salvar análise (agora em memória)
             self._save_analysis(analysis)
             
             return analysis
@@ -984,21 +867,18 @@ class NBAUltimateAnalytics2026:
         return insights
     
     def _save_analysis(self, analysis: Dict):
-        """Salva análise no banco de dados"""
+        """Salva análise na sessão do Streamlit (em vez de SQLite)"""
         try:
-            cursor = self.data_engine.cursor
-            cursor.execute('''
-                INSERT INTO saved_analyses 
-                (timestamp, matchup, prediction_data, accuracy_score, features_used)
-                VALUES (?, ?, ?, ?, ?)
-            ''', (
-                datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                analysis['matchup'],
-                json.dumps(analysis['final_prediction']),
-                analysis['confidence_score'],
-                json.dumps(list(self.ml_predictor.feature_names))
-            ))
-            self.data_engine.conn.commit()
+            if 'saved_analyses' not in st.session_state:
+                st.session_state.saved_analyses = []
+            
+            st.session_state.saved_analyses.append({
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'matchup': analysis['matchup'],
+                'prediction_data': analysis['final_prediction'],
+                'accuracy_score': analysis['confidence_score'],
+                'features_used': list(self.ml_predictor.feature_names)
+            })
         except:
             pass
 
@@ -1964,4 +1844,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
