@@ -1,3 +1,54 @@
+# ============================================================================
+# VERIFICAÇÃO DE DEPENDÊNCIAS (APENAS PARA DEBUG)
+# ============================================================================
+import sys
+import subprocess
+import pkg_resources
+
+def check_and_install():
+    required = {
+        'streamlit': '1.32.0',
+        'pandas': '2.1.4',
+        'numpy': '1.24.4',
+        'plotly': '5.18.0',
+        'scikit-learn': '1.3.2',
+        'matplotlib': '3.7.2',
+        'seaborn': '0.12.2',
+        'requests': '2.31.0'
+    }
+    
+    installed = {pkg.key: pkg.version for pkg in pkg_resources.working_set}
+    
+    for package, version in required.items():
+        if package not in installed:
+            print(f"Instalando {package}...")
+            subprocess.check_call([sys.executable, "-m", "pip", "install", f"{package}=={version}"])
+        else:
+            print(f"✅ {package} {installed[package]} já instalado")
+
+# Executar verificação
+check_and_install()
+
+# ============================================================================
+# AGORA IMPORTE NORMALMENTE
+# ============================================================================
+import streamlit as st
+import pandas as pd
+import numpy as np
+import plotly.graph_objects as go
+import plotly.express as px
+from plotly.subplots import make_subplots
+import json
+import warnings
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler
+import matplotlib.pyplot as plt
+import seaborn as sns
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Tuple
+
+warnings.filterwarnings('ignore')
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -1913,3 +1964,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
